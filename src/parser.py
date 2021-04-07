@@ -2,6 +2,7 @@ import math
 from tqdm.auto import tqdm
 import xml.etree.ElementTree as ET
 import argparse
+import mmap
 
 def parse_arg(configs):
     parser = argparse.ArgumentParser()
@@ -86,11 +87,14 @@ def parse_inverted_file(configs, N):
     '''
     inverted_files = {}
     inverted_list_path = configs["model_path"] + "/inverted-file"
-    with open(inverted_list_path, 'r') as f:
+
+    with open(inverted_list_path, 'r+b') as f:
         print("Reading Inverted Files: ")
-        pbar = tqdm(total = 1193467)
-        line = f.readline()
-        while line:
+        map_file = mmap.mmap(f.fileno(), 0, prot=mmap.PROT_READ)
+        # pbar = tqdm(total = 1193467)
+        while True:
+            line=map_file.readline()
+            if line == '': break
             line = line.split()
             vocab_1, vocab_2 = int(line[0]), int(line[1])
             key = (vocab_1, vocab_2) 
@@ -98,14 +102,16 @@ def parse_inverted_file(configs, N):
             inverted_files[key] = {"IDF": get_IDF(N, k), "docs": {}}
             max_freq = 0
             for _ in range(k):
-                line = f.readline().strip().split()
+                line = map_file.readline().strip().split()
                 doc_id = int(line[0])
                 doc_freq = int(line[1])
                 inverted_files[key]["docs"][doc_id] = doc_freq
                 max_freq = max(max_freq, doc_freq)
             inverted_files[key]["max_freq"] = max_freq
-            line = f.readline()
-            pbar.update(1)
+            # pbar.update(1)
+            # line = f.readline()
+
+            
     return inverted_files
 
 def parse_queries(corpus, configs, path):
@@ -132,4 +138,3 @@ def parse_queries(corpus, configs, path):
         
         queries.append(query)
     return queries
-    
