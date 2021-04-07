@@ -88,7 +88,7 @@ def parse_inverted_file(configs, N):
     inverted_list_path = configs["model_path"] + "/inverted-file"
     with open(inverted_list_path, 'r') as f:
         print("Reading Inverted Files: ")
-        pbar = tqdm(total = 1194000)
+        pbar = tqdm(total = 1193467)
         line = f.readline()
         while line:
             line = line.split()
