@@ -50,6 +50,7 @@ if __name__ == '__main__':
         "inverted_files": inverted_files,
         "avdl": avdl,
     }
+    print("Generating Matrix")
     sparse_matrix.gen_matrix(corpus, configs)
     id_to_magnitude = sparse_matrix.gen_id_to_magnitude(corpus, configs)
     corpus["id_to_magnitude"] = id_to_magnitude
@@ -58,10 +59,12 @@ if __name__ == '__main__':
     queries = sparse_matrix.gen_query_vector(queries, corpus, configs)
     query_to_magnitude = sparse_matrix.gen_query_to_magnitude(queries)
     query_responses = []
+    print("Predicting Queries")
     for query in tqdm(queries):
         response = predict.predict_query(query, corpus, configs)
         query_responses.append(response)
-    if use_rochio:
+    if configs["use_rochio"]:
+        print("Rocchio Feedback")
         for _ in tqdm(range(configs["rocchio_iters"])):
             for i in tqdm(range(len(query_responses))):
                 rocchio.rocchio_feedback(query_responses[i], queries[i],  corpus, configs)
