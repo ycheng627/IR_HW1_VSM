@@ -18,21 +18,24 @@ def parse_arg(configs):
     configs["model_path"] = args.m
     configs["corpus_path"] = args.d
 
-def get_unigram(s, dic, vocab_to_id, weight, unigram_weight):
+def get_unigram(s, dic, vocab_to_id, weight, unigram_weight, corpus):
+    gram_to_id = corpus["gram_to_id"]
     for i in range(len(s)):
         if s[i] in vocab_to_id:
-            key = (vocab_to_id[s[i]], -1)
+            key = gram_to_id[(vocab_to_id[s[i]], -1)]
             if key in dic:
                 dic[key] += 1 * weight * unigram_weight
             else:
                 dic[key] = 1 * weight * unigram_weight
 
-def get_bigram(s, dic, vocab_to_id, inverted_files, weight, bigram_weight):
+def get_bigram(s, dic, vocab_to_id, inverted_files, weight, bigram_weight, corpus):
+    gram_to_id = corpus["gram_to_id"]
     for i in range(len(s)-1):
         # first make sure both exists
         if s[i] in vocab_to_id and s[i+1] in vocab_to_id and \
-        (vocab_to_id[s[i]], vocab_to_id[s[i+1]]) in inverted_files:
-            key = (vocab_to_id[s[i]], vocab_to_id[s[i+1]])
+        (vocab_to_id[s[i]], vocab_to_id[s[i+1]]) in gram_to_id:
+            key = gram_to_id[(vocab_to_id[s[i]], vocab_to_id[s[i+1]])]
+            # key = (vocab_to_id[s[i]], vocab_to_id[s[i+1]])
             if key in dic:
                 dic[key] += 1 * weight * bigram_weight
             else:
@@ -87,32 +90,32 @@ def parse_inverted_file(configs, N):
     '''
     inverted_files = {}
     inverted_list_path = configs["model_path"] + "/inverted-file"
+    gram_to_id = {}
 
-    with open(inverted_list_path, 'r+b') as f:
+    with open(inverted_list_path, 'r') as f:
         print("Reading Inverted Files: ")
-        map_file = mmap.mmap(f.fileno(), 0, prot=mmap.PROT_READ)
-        # pbar = tqdm(total = 1193467)
-        while True:
-            line=map_file.readline()
-            if line == '': break
+        pbar = tqdm(total = 1193467)
+        gram_count = 0
+        line=f.readline()
+        while line:
             line = line.split()
             vocab_1, vocab_2 = int(line[0]), int(line[1])
-            key = (vocab_1, vocab_2) 
+            gram_id = gram_count
+            gram_to_id[(vocab_1, vocab_2)] = gram_count
             k = int(line[2])
-            inverted_files[key] = {"IDF": get_IDF(N, k), "docs": {}}
+            inverted_files[gram_id] = {"IDF": get_IDF(N, k), "docs": {}}
             max_freq = 0
             for _ in range(k):
-                line = map_file.readline().strip().split()
+                line = f.readline().strip().split()
                 doc_id = int(line[0])
                 doc_freq = int(line[1])
-                inverted_files[key]["docs"][doc_id] = doc_freq
+                inverted_files[gram_id]["docs"][doc_id] = doc_freq
                 max_freq = max(max_freq, doc_freq)
-            inverted_files[key]["max_freq"] = max_freq
-            # pbar.update(1)
-            # line = f.readline()
-
-            
-    return inverted_files
+            inverted_files[gram_id]["max_freq"] = max_freq
+            pbar.update(1)
+            line = f.readline()    
+            gram_count += 1        
+    return inverted_files, gram_to_id, gram_count
 
 def parse_queries(corpus, configs, path):
     tree = ET.parse(path)
@@ -131,8 +134,8 @@ def parse_queries(corpus, configs, path):
             weight = configs[properties.tag + "_weight"]
             text = properties.text.strip()
             dl += len(text)
-            get_unigram(text, words, vocab_to_id, weight, configs["unigram_weight"])
-            get_bigram(text, words, vocab_to_id, inverted_files, weight, configs["bigram_weight"])
+            get_unigram(text, words, vocab_to_id, weight, configs["unigram_weight"], corpus)
+            get_bigram(text, words, vocab_to_id, inverted_files, weight, configs["bigram_weight"], corpus)
         query["words"] = words
         query["dl"] = dl
         

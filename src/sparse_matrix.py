@@ -1,3 +1,7 @@
+import numpy as np
+from scipy.sparse import csr_matrix
+from tqdm.auto import tqdm
+
 def get_norm_tf(freq, max_freq, dl, avdl, k, b):
     '''
     Need both a doc length and a k normalization. Use formula
@@ -16,23 +20,31 @@ def gen_matrix(corpus, configs):
     of normalized TF * IDF
     '''
     inverted_files = corpus["inverted_files"]
+    gram_to_id = corpus["gram_to_id"]
     avdl = corpus["avdl"]
     id_to_doclen = corpus["id_to_doclen"]
     k = configs["k"]
     b = configs["b"]
-    for key in inverted_files:
-        IDF = inverted_files[key]["IDF"]
-        max_freq = inverted_files[key]["max_freq"]
-        for doc_id in inverted_files[key]["docs"]:
+    gram_id_list = []
+    doc_id_list = []
+    freq_list = []
+    for gram_id in (inverted_files):
+        IDF = inverted_files[gram_id]["IDF"]
+        max_freq = inverted_files[gram_id]["max_freq"]
+        for doc_id in inverted_files[gram_id]["docs"]:
             dl = id_to_doclen[doc_id]
-            doc_freq = inverted_files[key]["docs"][doc_id]
-            inverted_files[key]["docs"][doc_id] = get_norm_tf(doc_freq, max_freq, dl, avdl, k, b) * IDF
-        # for i in range(len(inverted_files[key]["docs"])):
-        #     doc_id = inverted_files[key]["docs"][i][0]
-        #     dl = id_to_doclen[doc_id]
-        #     freq = inverted_files[key]["docs"][i][1]
-        #     inverted_files[key]["docs"][i][1] = get_norm_tf(freq, max_freq, dl, avdl, k, b) * IDF
-    return inverted_files
+            doc_freq = inverted_files[gram_id]["docs"][doc_id]
+            gram_id_list.append(gram_id)
+            doc_id_list.append(doc_id)
+            freq_list.append(get_norm_tf(doc_freq, max_freq, dl, avdl, k, b) * IDF)
+            # inverted_files[gram_id]["docs"][doc_id] = get_norm_tf(doc_freq, max_freq, dl, avdl, k, b) * IDF
+            # inverted_files["sparse"][doc_id, word_id] = get_norm_tf(doc_freq, max_freq, dl, avdl, k, b) * IDF
+            # print(inverted_files["sparse"][doc_id, word_id])
+    gram_id_np = np.array(gram_id_list)
+    doc_id_np = np.array(doc_id_list)
+    freq_np = np.array(freq_list)
+    sparse = csr_matrix((freq_np, (doc_id_np, gram_id_np)), shape=(configs["doc_count"], configs["gram_count"]))
+    return sparse
 
 def gen_id_to_magnitude(corpus, configs):
     '''
@@ -49,7 +61,7 @@ def gen_id_to_magnitude(corpus, configs):
     return id_to_magnitude
 
 
-def gen_query_vector(queries, corpus, configs):
+def gen_query_vector(query, corpus, configs):
     '''
     Given an input of query vector, normalize through TF IDF
     '''
@@ -58,21 +70,29 @@ def gen_query_vector(queries, corpus, configs):
     id_to_doclen = corpus["id_to_doclen"]
     k = configs["k"]
     b = configs["b"]
-    for query in queries:
-        for word in query["words"]:
-            IDF = inverted_files[word]["IDF"]
-            max_freq = inverted_files[word]["max_freq"]
-            dl = query["dl"]
-            freq = query["words"][word]
-            query["words"][word] = get_norm_tf(freq, max_freq, dl, avdl, k, b) * IDF
-    return queries
+    gram_id_list = []
+    doc_id_list = []
+    freq_list = []
+    for gram_id in query["words"]:
+        IDF = inverted_files[gram_id]["IDF"]
+        max_freq = inverted_files[gram_id]["max_freq"]
+        dl = query["dl"]
+        freq = query["words"][gram_id]
+        gram_id_list.append(gram_id)
+        freq_list.append(get_norm_tf(freq, max_freq, dl, avdl, k, b) * IDF)
+    doc_id_list = [0 for i in range(len(gram_id_list))]
+
+    gram_id_np = np.array(gram_id_list)
+    doc_id_np = np.array(doc_id_list)
+    freq_np = np.array(freq_list)
+    sparse_query = csr_matrix((freq_np, (doc_id_np, gram_id_np)), shape=(1, configs["gram_count"]))
+    return sparse_query
 
 def gen_query_to_magnitude(queries):
     query_to_magnitude = dict.fromkeys(range(len(queries), 0))
     for i in range(len(queries)):
         s = 0
         for word in queries[i]["words"]:
-            # print(queries[i]["words"][word])
             s += pow(queries[i]["words"][word], 2)
 
     for i in range(len(queries)):

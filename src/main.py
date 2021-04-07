@@ -35,11 +35,11 @@ if __name__ == '__main__':
 #     parser.parse_arg(configs)
     fname_to_id, id_to_fname, id_to_doclen = parser.parse_file_list(configs)
     vocab_to_id, id_to_vocab = parser.parse_vocab_list(configs)
-    N = len(fname_to_id)
-    inverted_files = parser.parse_inverted_file(configs, N)
-    # old_inverted_files = inverted_files.copy()
-    # # Save checkpoint for notebook
-    # inverted_files = old_inverted_files.copy()
+    doc_count = len(fname_to_id)
+    inverted_files, gram_to_id, gram_count = parser.parse_inverted_file(configs, doc_count)
+    configs["gram_count"] = gram_count
+    configs["doc_count"] = doc_count
+    # Save checkpoint for notebook
     avdl = sum(id_to_doclen.values()) / len(id_to_doclen)
     corpus = {
         "fname_to_id": fname_to_id,
@@ -48,28 +48,25 @@ if __name__ == '__main__':
         "vocab_to_id": vocab_to_id,
         "id_to_vocab": id_to_vocab,
         "inverted_files": inverted_files,
+        "gram_to_id": gram_to_id,
         "avdl": avdl,
     }
-    print("Generating Matrix")
-    sparse_matrix.gen_matrix(corpus, configs)
-    id_to_magnitude = sparse_matrix.gen_id_to_magnitude(corpus, configs)
-    corpus["id_to_magnitude"] = id_to_magnitude
+    corpus["sparse"] = sparse_matrix.gen_matrix(corpus, configs)
+
     print("Processing Query")
     queries = parser.parse_queries(corpus, configs, configs["query_path"])
-    queries = sparse_matrix.gen_query_vector(queries, corpus, configs)
-    query_to_magnitude = sparse_matrix.gen_query_to_magnitude(queries)
+    sparse_queries = []
+    for query in queries:
+        sparse_queries.append( sparse_matrix.gen_query_vector(query, corpus, configs) )
     query_responses = []
-    print("Predicting Queries")
-    for query in tqdm(queries):
-        response = predict.predict_query(query, corpus, configs)
-        query_responses.append(response)
-    if configs["use_rochio"]:
-        print("Rocchio Feedback")
-        for _ in tqdm(range(configs["rocchio_iters"])):
-            for i in tqdm(range(len(query_responses))):
-                rocchio.rocchio_feedback(query_responses[i], queries[i],  corpus, configs)
-                response = predict.predict_query(queries[i], corpus, configs)
-                query_responses[i] = response
-    predict.process_predictions(query_responses, configs)
+    for sparse_query in tqdm(sparse_queries):
+        query_responses.append( predict.predict_query(sparse_query, corpus, configs) )
+    print("Rocchio Feedback")
+    for _ in tqdm(range(configs["rocchio_iters"])):
+        for i in tqdm(range(len(query_responses))):
+            sparse_queries[i] = rocchio.rocchio_feedback(query_responses[i], sparse_queries[i],  corpus, configs)
+            response = predict.predict_query(sparse_queries[i], corpus, configs)
+            query_responses[i] = response
+    predict.process_predictions(query_responses, configs, corpus)
     predict.write_predictions(query_responses, queries)
     predict.calc_MAP(query_responses, configs)

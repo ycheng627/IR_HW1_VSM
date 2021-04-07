@@ -1,42 +1,23 @@
 from tqdm.auto import tqdm
 from statistics import mean
+import numpy as np
+from operator import itemgetter
 
-def predict_query(query, corpus, configs):
+def predict_query(sparse_query, corpus, configs):
     target = configs["target"]
-    inverted_files = corpus["inverted_files"]
+    # inverted_files = corpus["inverted_files"]
+    sparse_matrix = corpus["sparse"]
     id_to_fname = corpus["id_to_fname"]
-    doc_cosine = {}
-    for word in (query["words"]):
-        query_val = query["words"][word]
-        # print(query_val)
-        for doc_id in inverted_files[word]["docs"]:
-            doc_freq = inverted_files[word]["docs"][doc_id]
-            if doc_id in doc_cosine:
-                doc_cosine[doc_id] += query_val * doc_freq
-            else:
-                doc_cosine[doc_id] = query_val * doc_freq
-    # print(doc_cosine)
-    for doc_id in doc_cosine:
-        # one of cdn, ctc, cte, cts
-        category = id_to_fname[doc_id].split("/")[1]
-        doc_weight = configs[category]
-        # print(doc_weight)
-        if configs["use_cosine"]:
-            doc_cosine[doc_id] /= corpus["id_to_magnitude"][doc_id]
-        doc_cosine[doc_id] *= doc_weight
-    id_to_fname = corpus["id_to_fname"]
-    response = []
-    response = [id_to_fname[doc_id] for doc_id in sorted(doc_cosine, key=doc_cosine.get, reverse=True)]
-    # for doc_id in sorted(doc_cosine, key=doc_cosine.get, reverse=True):
-    #     response.append(corpus["id_to_fname"][doc_id])
-        # print(doc_id, doc_cosine[doc_id])
-    return response
+    dot_product = sparse_matrix.dot(sparse_query.transpose()).toarray()
+    rank = sorted(range(len(dot_product)), key=lambda k: dot_product[k], reverse=True)
+    return rank
 
-def process_predictions(query_responses, configs):
+def process_predictions(query_responses, configs, corpus):
+    id_to_fname = corpus["id_to_fname"]
     for j in range(len(query_responses)):
         res = query_responses[j]
         for i in range(configs["target"]):
-            res[i] = res[i].lower().split("/")[-1]
+            res[i] = id_to_fname[res[i]].lower().split("/")[-1]
         
         query_responses[j] = res[:configs["target"]]
     
@@ -63,10 +44,46 @@ def calc_MAP(query_responses, configs):
         ans = answer[i]
         precision = []
         for j in range(1, configs["target"]):
-            # print(guess[:j])
-            # print(ans[:j])
             precision.append( len(list(set(guess[:j]).intersection(ans[:j]))) / len(ans[:j]) )
         MAP.append(mean(precision))
     print(MAP)
     print(mean(MAP))
     # print(query_responses)
+
+
+    # indices, dot_product_sorted = zip(*sorted(enumerate(dot_product), key=itemgetter(1), reverse=True))
+    # print(indices[:100])
+    # print(dot_product_sorted[:100])
+    
+    # print(list(sorted(with_index, key=lambda k: k[1], reverse=True)))
+    # print()
+    # print( np.argsort(dot_product) )
+    # print(dot_product)
+
+
+
+    # for word in (query["words"]):
+    #     query_val = query["words"][word]
+    #     # print(query_val)
+    #     for doc_id in inverted_files[word]["docs"]:
+    #         doc_freq = inverted_files[word]["docs"][doc_id]
+    #         if doc_id in doc_cosine:
+    #             doc_cosine[doc_id] += query_val * doc_freq
+    #         else:
+    #             doc_cosine[doc_id] = query_val * doc_freq
+    # # print(doc_cosine)
+    # for doc_id in doc_cosine:
+    #     # one of cdn, ctc, cte, cts
+    #     category = id_to_fname[doc_id].split("/")[1]
+    #     doc_weight = configs[category]
+    #     # print(doc_weight)
+    #     if configs["use_cosine"]:
+    #         doc_cosine[doc_id] /= corpus["id_to_magnitude"][doc_id]
+    #     doc_cosine[doc_id] *= doc_weight
+    # id_to_fname = corpus["id_to_fname"]
+    # response = []
+    # response = [id_to_fname[doc_id] for doc_id in sorted(doc_cosine, key=doc_cosine.get, reverse=True)]
+    # # for doc_id in sorted(doc_cosine, key=doc_cosine.get, reverse=True):
+    # #     response.append(corpus["id_to_fname"][doc_id])
+    #     # print(doc_id, doc_cosine[doc_id])
+    # return response
