@@ -11,7 +11,7 @@ configs = {
     "beta": 0.75,
     "gamma": 0.15,
     "target": 100,
-    "rochio": False,
+    "use_rochio": False,
     "query_path": "../queries/query-test.xml",
     "output_path": "../prediction.csv",
     "model_path": "../model",
@@ -61,11 +61,12 @@ if __name__ == '__main__':
     for query in tqdm(queries):
         response = predict.predict_query(query, corpus, configs)
         query_responses.append(response)
-    for _ in tqdm(range(configs["rocchio_iters"])):
-        for i in tqdm(range(len(query_responses))):
-            rocchio.rocchio_feedback(query_responses[i], queries[i],  corpus, configs)
-            response = predict.predict_query(queries[i], corpus, configs)
-            query_responses[i] = response
+    if use_rochio:
+        for _ in tqdm(range(configs["rocchio_iters"])):
+            for i in tqdm(range(len(query_responses))):
+                rocchio.rocchio_feedback(query_responses[i], queries[i],  corpus, configs)
+                response = predict.predict_query(queries[i], corpus, configs)
+                query_responses[i] = response
     predict.process_predictions(query_responses, configs)
     predict.write_predictions(query_responses, queries)
     predict.calc_MAP(query_responses, configs)

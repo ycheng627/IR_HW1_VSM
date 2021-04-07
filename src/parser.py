@@ -11,7 +11,7 @@ def parse_arg(configs):
     parser.add_argument("-m", action="store", default="../model")
     parser.add_argument("-d", action="store", default="../CIRB010")
     args = parser.parse_args()
-    configs["rochio"] = args.r
+    configs["use_rochio"] = args.r
     configs["query_path"] = args.i
     configs["output_path"] = args.o
     configs["model_path"] = args.m
