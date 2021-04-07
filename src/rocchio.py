@@ -24,7 +24,7 @@ def rocchio_feedback(query_response, query, corpus, configs):
     nonrelevant_vector /= C_nr
     query = configs["alpha"] * query \
             + configs["beta"] * relevant_vector \
-            + configs["gamma"] * nonrelevant_vector
+            - configs["gamma"] * nonrelevant_vector
     return query
 
 

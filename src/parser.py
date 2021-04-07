@@ -63,15 +63,15 @@ def get_IDF(N, k):
 def parse_file_list(configs):
     fname_to_id = {}
     id_to_fname = {}
-    id_to_doclen = {}
+    # id_to_doclen = {}
     file_list_path = configs["model_path"] + "/file-list"
     with open(file_list_path) as f:
         for index, name in enumerate((f)):
             name = name.strip()
             fname_to_id[name] = index
             id_to_fname[index] = name
-            id_to_doclen[index] = get_doclen(configs["corpus_path"], name)
-    return fname_to_id, id_to_fname, id_to_doclen
+            # id_to_doclen[index] = get_doclen(configs["corpus_path"], name)
+    return fname_to_id, id_to_fname
         
 def parse_vocab_list(configs):
     vocab_to_id = {}
@@ -91,6 +91,7 @@ def parse_inverted_file(configs, N):
     inverted_files = {}
     inverted_list_path = configs["model_path"] + "/inverted-file"
     gram_to_id = {}
+    id_to_doclen = {}
 
     with open(inverted_list_path, 'r') as f:
         print("Reading Inverted Files: ")
@@ -110,12 +111,16 @@ def parse_inverted_file(configs, N):
                 doc_id = int(line[0])
                 doc_freq = int(line[1])
                 inverted_files[gram_id]["docs"][doc_id] = doc_freq
+                if doc_id in id_to_doclen:
+                    id_to_doclen[doc_id] += doc_freq/2
+                else:
+                    id_to_doclen[doc_id] = doc_freq/2
                 max_freq = max(max_freq, doc_freq)
             inverted_files[gram_id]["max_freq"] = max_freq
             pbar.update(1)
             line = f.readline()    
             gram_count += 1        
-    return inverted_files, gram_to_id, gram_count
+    return inverted_files, gram_to_id, gram_count, id_to_doclen
 
 def parse_queries(corpus, configs, path):
     tree = ET.parse(path)

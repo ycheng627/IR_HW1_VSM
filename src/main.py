@@ -20,7 +20,7 @@ configs = {
     "question_weight": 1,
     "concepts_weight": 1,
     "narrative_weight": 1,
-    "query_path": "../queries/query-test.xml",
+    "query_path": "../queries/query-train.xml",
     "cdn": 1,
     "ctc": 1,
     "cte": 1,
@@ -33,10 +33,10 @@ configs = {
 
 if __name__ == '__main__':
 #     parser.parse_arg(configs)
-    fname_to_id, id_to_fname, id_to_doclen = parser.parse_file_list(configs)
+    fname_to_id, id_to_fname = parser.parse_file_list(configs)
     vocab_to_id, id_to_vocab = parser.parse_vocab_list(configs)
     doc_count = len(fname_to_id)
-    inverted_files, gram_to_id, gram_count = parser.parse_inverted_file(configs, doc_count)
+    inverted_files, gram_to_id, gram_count, id_to_doclen = parser.parse_inverted_file(configs, doc_count)
     configs["gram_count"] = gram_count
     configs["doc_count"] = doc_count
     # Save checkpoint for notebook
@@ -52,7 +52,6 @@ if __name__ == '__main__':
         "avdl": avdl,
     }
     corpus["sparse"] = sparse_matrix.gen_matrix(corpus, configs)
-
     print("Processing Query")
     queries = parser.parse_queries(corpus, configs, configs["query_path"])
     sparse_queries = []
