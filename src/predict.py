@@ -5,7 +5,6 @@ from operator import itemgetter
 
 def predict_query(sparse_query, corpus, configs):
     target = configs["target"]
-    # inverted_files = corpus["inverted_files"]
     sparse_matrix = corpus["sparse"]
     id_to_fname = corpus["id_to_fname"]
     dot_product = sparse_matrix.dot(sparse_query.transpose()).toarray()
@@ -21,9 +20,8 @@ def process_predictions(query_responses, configs, corpus):
         
         query_responses[j] = res[:configs["target"]]
     
-
-def write_predictions(query_responses, queries):
-    with open('../prediction.csv', 'w') as f:
+def write_predictions(query_responses, queries, configs):
+    with open(configs["output_path"], 'w') as f:
         f.write('query_id,retrieved_docs\n')
         for i in range(len(query_responses)):
             f.write('{},{}\n'.format(queries[i]["id"][-3:], ' '.join(query_responses[i])))

@@ -6,13 +6,13 @@ import mmap
 
 def parse_arg(configs):
     parser = argparse.ArgumentParser()
-    parser.add_argument("-r", action="store_true", default=False, help="Whether to use Relevance Feedback")
+    parser.add_argument("-r", action="store_true", help="Whether to use Relevance Feedback")
     parser.add_argument("-i", action="store", default="../queries/query-test.xml")
     parser.add_argument("-o", action="store", default="../prediction.csv")
     parser.add_argument("-m", action="store", default="../model")
     parser.add_argument("-d", action="store", default="../CIRB010")
     args = parser.parse_args()
-    configs["use_rochio"] = args.r
+    configs["use_rocchio"] = args.r
     configs["query_path"] = args.i
     configs["output_path"] = args.o
     configs["model_path"] = args.m

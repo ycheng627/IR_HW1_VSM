@@ -7,25 +7,24 @@ def rocchio_feedback(query_response, query, corpus, configs):
     # Use rocchio to generate a new query, where all vocab will be used
 
     # top 50 relevant
-    relevant_doc_ids = query_response[:50]
-    nonrelevant_doc_ids = query_response[-100:]
-    C_r = 50
-    C_nr = 100
+    # print("in rocchio")
+    r_num = 50
+    nr_num = 10
+    relevant_doc_ids = query_response[:r_num]
+    nonrelevant_doc_ids = query_response[-nr_num:]
+    C_r = r_num
+    C_nr = nr_num
     sparse_matrix = corpus["sparse"]
     relevant_vector = csr_matrix((1, configs["gram_count"]), dtype=np.float32)
     nonrelevant_vector = csr_matrix((1, configs["gram_count"]), dtype=np.float32)
     
     for doc_id in relevant_doc_ids:
-        # print(relevant_vector)
         relevant_vector += sparse_matrix[doc_id]
     for doc_id in relevant_doc_ids:
         nonrelevant_vector += sparse_matrix[doc_id]
     relevant_vector /= C_r
     nonrelevant_vector /= C_nr
-    query = configs["alpha"] * query \
-            + configs["beta"] * relevant_vector \
-            - configs["gamma"] * nonrelevant_vector
-    return query
+    return relevant_vector.multiply(configs["beta"])
 
 
     # inverted_files = corpus["inverted_files"]

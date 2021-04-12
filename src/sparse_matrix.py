@@ -2,7 +2,7 @@ import numpy as np
 from scipy.sparse import csr_matrix
 from tqdm.auto import tqdm
 
-def get_norm_tf(freq, max_freq, dl, avdl, k, b):
+def get_doc_norm_tf(freq, max_freq, dl, avdl, k, b):
     '''
     Need both a doc length and a k normalization. Use formula
     '''
@@ -12,6 +12,16 @@ def get_norm_tf(freq, max_freq, dl, avdl, k, b):
     Okapi = (( k + 1 ) * x ) / (x + k * doc_len_norm)
     # return BM25 / doc_len_norm
     return Okapi
+
+def get_query_norm_tf(freq, max_freq, dl, avdl, ka):
+    '''
+    Need both a doc length and a k normalization. Use formula
+    '''
+    x = freq
+    BM25 = (( ka + 1 ) * x ) / (x + ka)
+    # return BM25 / doc_len_norm
+    return BM25
+
 
 def gen_matrix(corpus, configs):
     '''
@@ -36,9 +46,9 @@ def gen_matrix(corpus, configs):
             doc_freq = inverted_files[gram_id]["docs"][doc_id]
             gram_id_list.append(gram_id)
             doc_id_list.append(doc_id)
-            freq_list.append(get_norm_tf(doc_freq, max_freq, dl, avdl, k, b) * IDF)
-            # inverted_files[gram_id]["docs"][doc_id] = get_norm_tf(doc_freq, max_freq, dl, avdl, k, b) * IDF
-            # inverted_files["sparse"][doc_id, word_id] = get_norm_tf(doc_freq, max_freq, dl, avdl, k, b) * IDF
+            freq_list.append(get_doc_norm_tf(doc_freq, max_freq, dl, avdl, k, b) * IDF)
+            # inverted_files[gram_id]["docs"][doc_id] = get_doc_norm_tf(doc_freq, max_freq, dl, avdl, k, b) * IDF
+            # inverted_files["sparse"][doc_id, word_id] = get_doc_norm_tf(doc_freq, max_freq, dl, avdl, k, b) * IDF
             # print(inverted_files["sparse"][doc_id, word_id])
     gram_id_np = np.array(gram_id_list)
     doc_id_np = np.array(doc_id_list)
@@ -68,7 +78,7 @@ def gen_query_vector(query, corpus, configs):
     inverted_files = corpus["inverted_files"]
     avdl = corpus["avdl"]
     id_to_doclen = corpus["id_to_doclen"]
-    k = configs["k"]
+    ka = configs["ka"]
     b = configs["b"]
     gram_id_list = []
     doc_id_list = []
@@ -79,7 +89,7 @@ def gen_query_vector(query, corpus, configs):
         dl = query["dl"]
         freq = query["words"][gram_id]
         gram_id_list.append(gram_id)
-        freq_list.append(get_norm_tf(freq, max_freq, dl, avdl, k, b) * IDF)
+        freq_list.append(get_query_norm_tf(freq, max_freq, dl, avdl, ka) * IDF)
     doc_id_list = [0 for i in range(len(gram_id_list))]
 
     gram_id_np = np.array(gram_id_list)
