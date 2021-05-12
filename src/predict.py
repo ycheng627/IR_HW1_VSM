@@ -46,6 +46,7 @@ def calc_MAP(query_responses, configs):
         MAP.append(mean(precision))
     print(MAP)
     print(mean(MAP))
+    return (mean(MAP))
     # print(query_responses)
 
 
